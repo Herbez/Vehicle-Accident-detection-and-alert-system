@@ -1,0 +1,67 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-expand navbar-light bg-navbar topbar mb-4 static-top">
+  <ul class="navbar-nav ml-auto">
+    <div class="topbar-divider d-none d-sm-block"></div>
+    <li class="nav-item dropdown no-arrow">
+      <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" data-toggle="dropdown"
+        aria-haspopup="true" aria-expanded="false">
+        <i class="fas fa-bell fa-sm fa-fw mr-2 text-gray-400"></i>
+        <span class="badge badge-danger badge-counter" id="notificationCount">0</span>
+      </a>
+      <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="notificationsDropdown">
+        <h6 class="dropdown-header">Notifications</h6>
+        <div id="notificationsList" class="dropdown-list"></div>
+      </div>
+    </li>
+
+    <div class="topbar-divider d-none d-sm-block"></div>
+    <li class="nav-item dropdown no-arrow">
+      <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown"
+        aria-haspopup="true" aria-expanded="false">
+        <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+        <span class="ml-2 d-none d-lg-inline text-white small"><?php echo $result->username; ?></span>
+      </a>
+      <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+        <a class="dropdown-item" href="logout.php" data-target="#logoutModal">
+          <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+          Logout
+        </a>
+      </div>
+    </li>
+  </ul>
+</nav>
+
+<script>
+  $(document).ready(function() {
+    function checkNotifications() {
+      $.ajax({
+        url: 'check_notifications.php',
+        type: 'GET',
+        success: function(data) {
+          var notifications = JSON.parse(data);
+          var notificationCount = notifications.length;
+          $('#notificationCount').text(notificationCount);
+
+          var notificationsList = $('#notificationsList');
+          notificationsList.empty();
+          notifications.forEach(function(notification) {
+            notificationsList.append('<a class="dropdown-item">' + notification.message + '</a>');
+          });
+        }
+      });
+    }
+
+    // Check for notifications every 5 seconds
+    setInterval(checkNotifications, 5000);
+    checkNotifications(); // Initial check
+  });
+</script>
+
+</body>
+</html>

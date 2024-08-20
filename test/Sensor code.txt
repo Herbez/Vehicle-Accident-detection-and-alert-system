@@ -1,0 +1,902 @@
+// sending location in intervals multiply
+
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include <ESP8266WiFi.h>
+
+TinyGPSPlus gps;  // The TinyGPS++ object
+SoftwareSerial ss(4, 5); // The serial connection to the GPS device
+
+const char* ssid = "Herbez";
+const char* password = "Hpass@123";
+
+float latitude, longitude;
+int year, month, day, hour, minute, second;
+String date_str, time_str, lat_str, lng_str;
+int pm;
+
+WiFiServer server(80);
+WiFiClient client; 
+
+unsigned long lastSendTime = 0; // Track the last time data was sent
+const unsigned long sendInterval = 60000; // Interval between sends (1 minute)
+
+void setup() {
+  Serial.begin(115200);
+  ss.begin(9600);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  server.begin();
+  Serial.println("Server started");
+  Serial.println(WiFi.localIP());
+}
+
+void sendGPSData(float latitude, float longitude) {
+  if (WiFi.status() == WL_CONNECTED) {
+    if (client.connect("192.168.99.252", 80)) {  // Replace with your server's IP address
+      String postData = "latitude=" + String(latitude, 6) + "&longitude=" + String(longitude, 6);
+      client.println("POST /accid/insert_data.php HTTP/1.1");
+      client.println("Host: 192.168.99.252");  // Replace with your server's IP address
+      client.println("Content-Type: application/x-www-form-urlencoded");
+      client.print("Content-Length: ");
+      client.println(postData.length());
+      client.println();
+      client.print(postData);
+      client.stop();
+    } else {
+      Serial.println("Failed to connect to server");
+    }
+  }
+}
+
+void loop() {
+  while (ss.available() > 0) {
+    if (gps.encode(ss.read())) {
+      if (gps.location.isValid()) {
+        latitude = gps.location.lat();
+        longitude = gps.location.lng();
+        lat_str = String(latitude, 6);
+        lng_str = String(longitude, 6);
+      }
+
+      if (gps.date.isValid()) {
+        date_str = "";
+        day = gps.date.day();
+        month = gps.date.month();
+        year = gps.date.year();
+        if (day < 10)
+          date_str += '0';
+        date_str += String(day);
+        date_str += " / ";
+        if (month < 10)
+          date_str += '0';
+        date_str += String(month);
+        date_str += " / ";
+        date_str += String(year);
+      }
+
+      if (gps.time.isValid()) {
+        time_str = "";
+        hour = gps.time.hour();
+        minute = gps.time.minute();
+        second = gps.time.second();
+
+        // Adjust for Rwanda timezone (UTC+2)
+        hour += 2;
+        if (hour >= 24) {
+          hour -= 24;
+          day += 1; // Adjust date if necessary
+        }
+
+        if (hour >= 12) {
+          pm = 1;
+          if (hour > 12) hour -= 12;  // Convert to 12-hour format
+        } else {
+          pm = 0;
+          if (hour == 0) hour = 12;  // Midnight case
+        }
+
+        if (hour < 10)
+          time_str += '0';
+        time_str += String(hour);
+        time_str += " : ";
+        if (minute < 10)
+          time_str += '0';
+        time_str += String(minute);
+        time_str += " : ";
+        if (second < 10)
+          time_str += '0';
+        time_str += String(second);
+
+        if (pm == 1)
+          time_str += " PM ";
+        else
+          time_str += " AM ";
+      }
+    }
+  }
+
+  // Check if it is time to send data
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastSendTime >= sendInterval) {
+    if (gps.location.isValid()) {
+      sendGPSData(latitude, longitude);
+    }
+    lastSendTime = currentMillis; // Update last send time
+  }
+
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+
+  // Prepare the response
+  String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n <!DOCTYPE html> <html> <head> <title>GPS Interfacing with NodeMCU</title> <style>";
+  s += "a:link {background-color: YELLOW;text-decoration: none;}";
+  s += "table, th, td {border: 1px solid black;} </style> </head> <body> <h1 style=";
+  s += "font-size:300%;";
+  s += " ALIGN=CENTER> GPS Interfacing with NodeMCU</h1>";
+  s += "<p ALIGN=CENTER style=\"font-size:150%;\"";
+  s += "> <b>Location Details</b></p> <table ALIGN=CENTER style=";
+  s += "width:50%";
+  s += "> <tr> <th>Latitude</th>";
+  s += "<td ALIGN=CENTER >";
+  s += lat_str;
+  s += "</td> </tr> <tr> <th>Longitude</th> <td ALIGN=CENTER >";
+  s += lng_str;
+  s += "</td> </tr> <tr>  <th>Date</th> <td ALIGN=CENTER >";
+  s += date_str;
+  s += "</td></tr> <tr> <th>Time</th> <td ALIGN=CENTER >";
+  s += time_str;
+  s += "</td>  </tr> </table> ";
+  if (gps.location.isValid()) {
+    s += "<p align=center><a style=\"color:RED;font-size:125%;\" href=\"http://maps.google.com/maps?&z=15&mrt=yp&t=k&q=";
+    s += lat_str;
+    s += "+";
+    s += lng_str;
+    s += "\" target=\"_top\">Click here!</a> To check the location in Google maps.</p>";
+  }
+  s += "</body> </html> \n";
+  client.print(s);
+  delay(100);
+}
+
+
+
+
+
+// sends data once but sends many times
+
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include <ESP8266WiFi.h>
+
+TinyGPSPlus gps;  // The TinyGPS++ object
+SoftwareSerial ss(4, 5); // The serial connection to the GPS device
+
+const char* ssid = "Herbez";
+const char* password = "Hpass@123";
+
+float latitude, longitude;
+int year, month, day, hour, minute, second;
+String date_str, time_str, lat_str, lng_str;
+int pm;
+
+WiFiServer server(80);
+WiFiClient client; 
+
+bool dataSent = false; // Flag to track if data has been sent
+
+void setup() {
+  Serial.begin(115200);
+  ss.begin(9600);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  server.begin();
+  Serial.println("Server started");
+  Serial.println(WiFi.localIP());
+}
+
+void sendGPSData(float latitude, float longitude) {
+  if (WiFi.status() == WL_CONNECTED) {
+    if (client.connect("192.168.99.252", 80)) {  // Replace with your server's IP address
+      String postData = "latitude=" + String(latitude, 6) + "&longitude=" + String(longitude, 6);
+      client.println("POST /accid/insert_data.php HTTP/1.1");
+      client.println("Host: 192.168.99.252");  // Replace with your server's IP address
+      client.println("Content-Type: application/x-www-form-urlencoded");
+      client.print("Content-Length: ");
+      client.println(postData.length());
+      client.println();
+      client.print(postData);
+      client.stop();
+    } else {
+      Serial.println("Failed to connect to server");
+    }
+  }
+}
+
+void loop() {
+  while (ss.available() > 0) {
+    if (gps.encode(ss.read())) {
+      if (gps.location.isValid()) {
+        latitude = gps.location.lat();
+        longitude = gps.location.lng();
+        lat_str = String(latitude, 6);
+        lng_str = String(longitude, 6);
+      }
+
+      if (gps.date.isValid()) {
+        date_str = "";
+        day = gps.date.day();
+        month = gps.date.month();
+        year = gps.date.year();
+        if (day < 10)
+          date_str += '0';
+        date_str += String(day);
+        date_str += " / ";
+        if (month < 10)
+          date_str += '0';
+        date_str += String(month);
+        date_str += " / ";
+        date_str += String(year);
+      }
+
+      if (gps.time.isValid()) {
+        time_str = "";
+        hour = gps.time.hour();
+        minute = gps.time.minute();
+        second = gps.time.second();
+
+        // Adjust for Rwanda timezone (UTC+2)
+        hour += 2;
+        if (hour >= 24) {
+          hour -= 24;
+          day += 1; // Adjust date if necessary
+        }
+
+        if (hour >= 12) {
+          pm = 1;
+          if (hour > 12) hour -= 12;  // Convert to 12-hour format
+        } else {
+          pm = 0;
+          if (hour == 0) hour = 12;  // Midnight case
+        }
+
+        if (hour < 10)
+          time_str += '0';
+        time_str += String(hour);
+        time_str += " : ";
+        if (minute < 10)
+          time_str += '0';
+        time_str += String(minute);
+        time_str += " : ";
+        if (second < 10)
+          time_str += '0';
+        time_str += String(second);
+
+        if (pm == 1)
+          time_str += " PM ";
+        else
+          time_str += " AM ";
+      }
+
+      // Send data if it has not been sent yet
+      if (!dataSent) {
+        sendGPSData(latitude, longitude);
+        dataSent = true; // Set the flag to true to indicate that data has been sent
+      }
+    }
+  }
+
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+
+  // Prepare the response
+  String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n <!DOCTYPE html> <html> <head> <title>GPS Interfacing with NodeMCU</title> <style>";
+  s += "a:link {background-color: YELLOW;text-decoration: none;}";
+  s += "table, th, td {border: 1px solid black;} </style> </head> <body> <h1 style=";
+  s += "font-size:300%;";
+  s += " ALIGN=CENTER> GPS Interfacing with NodeMCU</h1>";
+  s += "<p ALIGN=CENTER style=\"font-size:150%;\"";
+  s += "> <b>Location Details</b></p> <table ALIGN=CENTER style=";
+  s += "width:50%";
+  s += "> <tr> <th>Latitude</th>";
+  s += "<td ALIGN=CENTER >";
+  s += lat_str;
+  s += "</td> </tr> <tr> <th>Longitude</th> <td ALIGN=CENTER >";
+  s += lng_str;
+  s += "</td> </tr> <tr>  <th>Date</th> <td ALIGN=CENTER >";
+  s += date_str;
+  s += "</td></tr> <tr> <th>Time</th> <td ALIGN=CENTER >";
+  s += time_str;
+  s += "</td>  </tr> </table> ";
+  if (gps.location.isValid()) {
+    s += "<p align=center><a style=\"color:RED;font-size:125%;\" href=\"http://maps.google.com/maps?&z=15&mrt=yp&t=k&q=";
+    s += lat_str;
+    s += "+";
+    s += lng_str;
+    s += "\" target=\"_top\">Click here!</a> To check the location in Google maps.</p>";
+  }
+  s += "</body> </html> \n";
+  client.print(s);
+  delay(100);
+  
+  // Reset the flag after processing
+  dataSent = false;
+}
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+// Data only sent once successfully
+
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include <ESP8266WiFi.h>
+
+TinyGPSPlus gps;  // The TinyGPS++ object
+SoftwareSerial ss(4, 5); // The serial connection to the GPS device
+
+const char* ssid = "Herbez";
+const char* password = "Hpass@123";
+
+float latitude, longitude;
+int year, month, day, hour, minute, second;
+String date_str, time_str, lat_str, lng_str;
+int pm;
+
+WiFiServer server(80);
+WiFiClient client; 
+
+bool dataSent = false; // Flag to track if data has been sent
+
+void setup() {
+  Serial.begin(115200);
+  ss.begin(9600);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  server.begin();
+  Serial.println("Server started");
+  Serial.println(WiFi.localIP());
+}
+
+void sendGPSData(float latitude, float longitude) {
+  if (WiFi.status() == WL_CONNECTED) {
+    if (client.connect("192.168.99.252", 80)) {  // Replace with your server's IP address
+      String postData = "latitude=" + String(latitude, 6) + "&longitude=" + String(longitude, 6);
+      client.println("POST /accid/insert_data.php HTTP/1.1");
+      client.println("Host: 192.168.99.252");  // Replace with your server's IP address
+      client.println("Content-Type: application/x-www-form-urlencoded");
+      client.print("Content-Length: ");
+      client.println(postData.length());
+      client.println();
+      client.print(postData);
+      client.stop();
+      
+      Serial.println("Data sent to server.");
+    } else {
+      Serial.println("Failed to connect to server");
+    }
+  }
+}
+
+void loop() {
+  while (ss.available() > 0) {
+    if (gps.encode(ss.read())) {
+      if (gps.location.isValid() && gps.location.lat() != 0 && gps.location.lng() != 0) {
+        latitude = gps.location.lat();
+        longitude = gps.location.lng();
+        lat_str = String(latitude, 6);
+        lng_str = String(longitude, 6);
+        
+        if (!dataSent) {
+          sendGPSData(latitude, longitude);
+          dataSent = true; // Set the flag to true to indicate that data has been sent
+        }
+      }
+
+      if (gps.date.isValid()) {
+        date_str = "";
+        day = gps.date.day();
+        month = gps.date.month();
+        year = gps.date.year();
+        if (day < 10)
+          date_str += '0';
+        date_str += String(day);
+        date_str += " / ";
+        if (month < 10)
+          date_str += '0';
+        date_str += String(month);
+        date_str += " / ";
+        date_str += String(year);
+      }
+
+      if (gps.time.isValid()) {
+        time_str = "";
+        hour = gps.time.hour();
+        minute = gps.time.minute();
+        second = gps.time.second();
+
+        // Adjust for Rwanda timezone (UTC+2)
+        hour += 2;
+        if (hour >= 24) {
+          hour -= 24;
+          day += 1; // Adjust date if necessary
+        }
+
+        if (hour >= 12) {
+          pm = 1;
+          if (hour > 12) hour -= 12;  // Convert to 12-hour format
+        } else {
+          pm = 0;
+          if (hour == 0) hour = 12;  // Midnight case
+        }
+
+        if (hour < 10)
+          time_str += '0';
+        time_str += String(hour);
+        time_str += " : ";
+        if (minute < 10)
+          time_str += '0';
+        time_str += String(minute);
+        time_str += " : ";
+        if (second < 10)
+          time_str += '0';
+        time_str += String(second);
+
+        if (pm == 1)
+          time_str += " PM ";
+        else
+          time_str += " AM ";
+      }
+    }
+  }
+
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+
+  // Prepare the response
+  String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n <!DOCTYPE html> <html> <head> <title>GPS Interfacing with NodeMCU</title> <style>";
+  s += "a:link {background-color: YELLOW;text-decoration: none;}";
+  s += "table, th, td {border: 1px solid black;} </style> </head> <body> <h1 style=";
+  s += "font-size:300%;";
+  s += " ALIGN=CENTER> GPS Interfacing with NodeMCU</h1>";
+  s += "<p ALIGN=CENTER style=\"font-size:150%;\"";
+  s += "> <b>Location Details</b></p> <table ALIGN=CENTER style=";
+  s += "width:50%";
+  s += "> <tr> <th>Latitude</th>";
+  s += "<td ALIGN=CENTER >";
+  s += lat_str;
+  s += "</td> </tr> <tr> <th>Longitude</th> <td ALIGN=CENTER >";
+  s += lng_str;
+  s += "</td> </tr> <tr>  <th>Date</th> <td ALIGN=CENTER >";
+  s += date_str;
+  s += "</td></tr> <tr> <th>Time</th> <td ALIGN=CENTER >";
+  s += time_str;
+  s += "</td>  </tr> </table> ";
+  if (gps.location.isValid()) {
+    s += "<p align=center><a style=\"color:RED;font-size:125%;\" href=\"http://maps.google.com/maps?&z=15&mrt=yp&t=k&q=";
+    s += lat_str;
+    s += "+";
+    s += lng_str;
+    s += "\" target=\"_top\">Click here!</a> To check the location in Google maps.</p>";
+  }
+  s += "</body> </html> \n";
+  client.print(s);
+  delay(100);
+}
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// send location to server and send sms to phone number
+
+
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include <ESP8266WiFi.h>
+
+TinyGPSPlus gps;  // The TinyGPS++ object
+SoftwareSerial ss(4, 5); // The serial connection to the GPS device
+
+const char* ssid = "Herbez";
+const char* password = "Hpass@123";
+
+float latitude, longitude;
+String lat_str, lng_str;
+
+WiFiServer server(80);
+WiFiClient client;
+
+bool dataSent = false; // Flag to track if data has been sent
+
+void setup() {
+  Serial.begin(115200);
+  ss.begin(9600);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  server.begin();
+  Serial.println("Server started");
+  Serial.println(WiFi.localIP());
+}
+
+void sendGPSData(float latitude, float longitude) {
+  if (WiFi.status() == WL_CONNECTED) {
+    if (client.connect("192.168.217.252", 80)) {  // Replace with your server's IP address
+      String postData = "latitude=" + String(latitude, 6) + "&longitude=" + String(longitude, 6);
+      
+      // Send GPS data to the server
+      client.println("POST /accid/insert_data.php HTTP/1.1");
+      client.println("Host: 192.168.217.252");  // Replace with your server's IP address
+      client.println("Content-Type: application/x-www-form-urlencoded");
+      client.print("Content-Length: ");
+      client.println(postData.length());
+      client.println();
+      client.print(postData);
+      client.stop();
+      
+      Serial.println("Location sent to server successfully.");
+      
+      // Trigger the sendsms.php file using POST
+      if (client.connect("192.168.217.252", 80)) {  // Reuse client to connect to the server again
+        String smsData = "";  // Add any data you need to send to sendsms.php, if necessary
+        client.println("GET /accid/sendsms2.php HTTP/1.1");
+        client.println("Host: 192.168.217.252");  // Replace with your server's IP address
+        client.println("Content-Type: application/x-www-form-urlencoded");
+        client.print("Content-Length: ");
+        client.println(smsData.length());
+        client.println();
+        client.print(smsData);
+        client.stop();
+        
+        Serial.println("SMS sent successfully.");
+      } else {
+        Serial.println("Failed to send SMS");
+      }
+    } else {
+      Serial.println("Failed to send location to server");
+    }
+  }
+}
+
+void loop() {
+  while (ss.available() > 0) {
+    if (gps.encode(ss.read())) {
+      if (gps.location.isValid() && gps.location.lat() != 0 && gps.location.lng() != 0) {
+        latitude = gps.location.lat();
+        longitude = gps.location.lng();
+        lat_str = String(latitude, 6);
+        lng_str = String(longitude, 6);
+        
+        if (!dataSent) {
+          sendGPSData(latitude, longitude);
+          dataSent = true; // Set the flag to true to indicate that data has been sent
+        }
+      }
+    }
+  }
+
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+
+  delay(100);
+}
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// detect vibration and send data in database and sms on phone
+
+
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+
+const char* ssid = "Herbez";
+const char* password = "Hpass@123";
+
+// Define the pin for the vibration sensor
+const int vibrationPin = D5; // Pin connected to the vibration sensor
+const int accidentThreshold = 1; // Threshold for detecting an accident
+
+bool accidentDetected = false; // Flag to track if an accident is detected
+
+WiFiClient client;
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+
+  pinMode(vibrationPin, INPUT); // Set the vibration sensor pin as input
+}
+
+void loop() {
+  int sensorValue = digitalRead(vibrationPin); // Read the vibration sensor state
+
+  // Check if an accident is detected and hasn't been reported yet
+  if (!accidentDetected && sensorValue >= accidentThreshold) {
+    Serial.println("Accident Detected!");
+    accidentDetected = true; // Set the flag to indicate an accident has been detected
+
+    if (WiFi.status() == WL_CONNECTED) {
+      // Prepare the data to send
+      String latitude = "-1.984446"; // Replace with actual GPS data
+      String longitude = "30.092817"; // Replace with actual GPS data
+      String speed = "30.5"; // Replace with actual speed data
+      String impactDetected = "1"; // Accident detected
+
+      if (client.connect("192.168.194.252", 80)) {
+        String postData = "latitude=" + latitude + "&longitude=" + longitude + "&speed=" + speed + "&impact_detected=" + impactDetected;
+
+        // Send GPS data to the server
+        client.println("POST /accid/test/vib/senddata.php HTTP/1.1");
+        client.println("Host: 192.168.194.252");  // Replace with your server's IP address
+        client.println("Content-Type: application/x-www-form-urlencoded");
+        client.print("Content-Length: ");
+        client.println(postData.length());
+        client.println();
+        client.print(postData);
+        client.stop();
+
+        Serial.println("Data sent to server successfully.");
+      } else {
+        Serial.println("Failed to send data to server");
+      }
+
+      // Trigger the sendsms.php file using GET
+      if (client.connect("192.168.194.252", 80)) {  // Reuse client to connect to the server again
+        client.println("GET /accid/sendsms.php HTTP/1.1");
+        client.println("Host: 192.168.194.252");  // Replace with your server's IP address
+        client.println("Content-Type: application/x-www-form-urlencoded");
+        client.println();
+        client.stop();
+
+        Serial.println("SMS sent successfully.");
+      } else {
+        Serial.println("Failed to send SMS");
+      }
+    }
+    delay(10000); // Delay to prevent multiple triggers in a very short time
+  } else if (sensorValue < accidentThreshold) {
+    Serial.println("No Accident.");
+    accidentDetected = false; // Reset the flag if no accident is detected
+  }
+
+  delay(2000); // Delay to prevent multiple triggers in a very short time
+}
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// accelerometer, buzzer and vibration sensor
+
+Accelerometer
+-------------
+X-axis ------> A0(esp8266)
+VCC ---------> VCC(esp8266)
+GND ---------> GND(esp8266)
+
+vibration sensor
+----------------
+DO(vibration) ---------> D5(esp8266)
+VCC ---------> VCC(esp8266)
+GND ---------> GND(esp8266)
+
+GPS
+---
+TX ----------> D1(esp8266)
+RX ----------> D2(esp8266)
+VCC ---------> VCC(esp8266)
+GND ---------> GND(esp8266)
+
+Buzzer
+------
+GND ----------> GND(esp8266)
+VCC -----------> D7(esp8266)
+
+
+const int xpin = A0;  // x-axis of the accelerometer
+const int vibrationSensor = D5; // Digital pin connected to the vibration sensor
+const int buzzer = D7;  // Buzzer
+
+void setup() {
+  pinMode(vibrationSensor, INPUT); // Set the vibration sensor pin as input
+  pinMode(buzzer, OUTPUT); // Set the buzzer pin as output
+  digitalWrite(buzzer, LOW); // Ensure the buzzer is off at the start
+  Serial.begin(9600); // Start the Serial communication
+}
+
+void loop() {
+  int x = analogRead(xpin); // Read the x-axis value of the accelerometer
+  long measurement = vibration(); // Measure the vibration
+  delay(1000); // Wait for 1 second
+
+  // Print the measurement and x-axis values
+  Serial.print("Vibration Measurement: ");
+  Serial.println(measurement);
+  Serial.print("X-Axis: ");
+  Serial.println(x);
+
+  // Check if an accident is detected
+  if (measurement > 1000) {
+    Serial.println("Accident Detected.");
+    // Buzzer sound intervals
+    for (int i = 0; i < 5; i++) { // Repeat the buzzer sound 5 times
+      digitalWrite(buzzer, HIGH); // Turn on the buzzer
+      delay(500); // Buzzer stays on for 500ms
+      digitalWrite(buzzer, LOW); // Turn off the buzzer
+      delay(500); // Buzzer stays off for 500ms
+    }
+  } else {
+    Serial.println("No Accident.");
+  }
+}
+
+long vibration() {
+  long measurement = pulseIn(vibrationSensor, HIGH); // Measure the duration of the HIGH pulse on the vibration sensor
+  return measurement;
+}
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+
+const char* ssid = "Herbez";
+const char* password = "Hpass@123";
+
+const int xpin = A0;  // x-axis of the accelerometer
+const int vibrationSensor = D5; // Digital pin connected to the vibration sensor
+const int buzzer = D7;  // Buzzer
+
+WiFiClient client; // Initialize the WiFiClient object
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+
+  pinMode(vibrationSensor, INPUT); // Set the vibration sensor pin as input
+  pinMode(buzzer, OUTPUT); // Set the buzzer pin as output
+  digitalWrite(buzzer, LOW); // Ensure the buzzer is off at the start
+}
+
+void sendGPSData() {
+  if (WiFi.status() == WL_CONNECTED) {
+    // Prepare the data to send
+    String latitude = "-1.984446"; // Replace with actual GPS data
+    String longitude = "30.092817"; // Replace with actual GPS data
+    String impactDetected = "1"; // Accident detected
+
+    if (client.connect("192.168.80.252", 80)) {  // Replace with your server's IP address
+      String postData = "latitude=" + latitude + "&longitude=" + longitude + "&impact_detected=" + impactDetected;
+
+      delay(2000);
+      // Send GPS data to the server
+      client.println("POST /accid/insert_data.php HTTP/1.1");
+      client.println("Host: 192.168.80.252");  // Replace with your server's IP address
+      client.println("Content-Type: application/x-www-form-urlencoded");
+      client.print("Content-Length: ");
+      client.println(postData.length());
+      client.println();
+      client.print(postData);
+      client.stop();
+
+      Serial.println("Location sent to server successfully.");
+
+      // Trigger the sendsms.php file using POST
+      if (client.connect("192.168.80.252", 80)) {  // Reuse client to connect to the server again
+        String smsData = "";  // Add any data you need to send to sendsms.php, if necessary
+        client.println("GET /accid/sendsms.php HTTP/1.1");
+        client.println("Host: 192.168.217.252");  // Replace with your server's IP address
+        client.println("Content-Type: application/x-www-form-urlencoded");
+        client.print("Content-Length: ");
+        client.println(smsData.length());
+        client.println();
+        client.print(smsData);
+        client.stop();
+
+        Serial.println("SMS sent successfully.");
+      } else {
+        Serial.println("Failed to send SMS");
+      }
+    } else {
+      Serial.println("Failed to send location to server");
+    }
+  }
+}
+
+void loop() {
+  int x = analogRead(xpin); // Read the x-axis value of the accelerometer
+  long measurement = vibration(); // Measure the vibration
+  delay(1000); // Wait for 1 second
+
+  // Print the measurement and x-axis values
+  Serial.print("Vibration Measurement: ");
+  Serial.println(measurement);
+  Serial.print("X-Axis: ");
+  Serial.println(x);
+
+  // Check if an accident is detected
+  if (measurement > 1000) {
+    Serial.println("Accident Detected.");
+    // Buzzer sound intervals
+    for (int i = 0; i < 5; i++) { // Repeat the buzzer sound 5 times
+      digitalWrite(buzzer, HIGH); // Turn on the buzzer
+      delay(500); // Buzzer stays on for 500ms
+      digitalWrite(buzzer, LOW); // Turn off the buzzer
+      delay(500); // Buzzer stays off for 500ms
+    }
+    sendGPSData();  
+
+  } else {
+    Serial.println("No Accident.");
+  }
+}
+
+long vibration() {
+  long measurement = pulseIn(vibrationSensor, HIGH); // Measure the duration of the HIGH pulse on the vibration sensor
+  return measurement;
+}
