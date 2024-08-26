@@ -3,7 +3,7 @@
 #include <ESP8266HTTPClient.h>
 
 const char* ssid = "Herbez"; // Wi-Fi name
-const char* password = "Hpass@123"; // Wi-fi password
+const char* password = "123456777"; // Wi-fi password
 
 const int xpin = A0;  // x-axis of the accelerometer
 const int vibrationSensor = D5; // Digital pin connected to the vibration sensor

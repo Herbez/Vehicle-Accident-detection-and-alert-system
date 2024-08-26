@@ -7,9 +7,12 @@ body {
   }
 
   .login-container {
-    max-width: 300px;
+    max-width: 350px;
     width: 100%;
-    padding: 15px;
+    font-weight: bold; 
+    font-family: Arial, sans-serif; 
+    font-size: 22px;
+    padding: 30px;
     background-color: #ffffff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   }
