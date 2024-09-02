@@ -35,10 +35,11 @@ if ($result->num_rows > 0) {
 }
 
 // Create the message
-$message = "Accident detected\n";
+$message = "Accident detected at\n";
+$message .= "Location: https://maps.google.com/?q=$latitude,$longitude \n";
 $message .= "Victim's Name: $fnames\n";
 // $message .= "Vehicle License plate: $licenseplate\n";
-$message .= "Location: https://maps.google.com/?q=$latitude,$longitude";
+
 
 // $familyphone
 $data=array(

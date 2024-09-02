@@ -71,20 +71,20 @@
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
+    <!-- <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">
             <li class="nav-item">
                 <a class="nav-link" href="#" style="color:black;">Sign Up 
                   <i class="fas fa-sign-in-alt"></i></a>
             </li>
         </ul>
-    </div>
+    </div> -->
 </nav>
 
 
   <div class="login-container" style="margin-top: 40px;max-width: 350px;padding: 30px;" >
       <header>
-          <h3 class="text-center" style="margin-bottom: 30px; font-weight: bold; font-family: Arial, sans-serif; font-size: 26px;">
+          <h3 class="text-center" style="margin-bottom: 30px;  font-family: Arial, sans-serif; font-size: 26px;">
           LOGIN FORM</h3>
         </header>
         <small class="text-danger"> <?php  echo $message; ?> 
@@ -92,13 +92,14 @@
           
     <form method="POST" action="">
       <div class="form-group">
-        <label for="inputEmail">Email:</label>
+        <label for="inputEmail" style=" font-size: 16px;">
+          Email:</label>
         <input type="email" class="form-control" name="email" placeholder="Enter your email" >
         
       </div>
       
       <div class="form-group">
-        <label for="inputPassword">Password:</label>
+        <label for="inputPassword" style=" font-size: 16px;">Password:</label>
         <input type="password" class="form-control memberEmail" name="password" placeholder="Enter your password" >
         
       </div>
@@ -106,10 +107,10 @@
       
       <button type="submit"  name="signin" class="btn btn-primary mb-6 BtnLogin" >Login </button>
     </form>
-    <div class="sign-up mt-3">
+    <!-- <div class="sign-up mt-3">
     Don't have an account? <a href="signup.php">Create Account</a>
-    </div>
-    <div class="forgot-password mt-3">
+    </div> -->
+    <div class="forgot-password mt-3" style=" font-size: 16px;">
       <a href="#">Forgot Password?</a>
     </div>
   </div>

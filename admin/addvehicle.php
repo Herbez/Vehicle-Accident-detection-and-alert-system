@@ -159,7 +159,7 @@ if(isset($_POST['addvehicle']))
     
     if (mysqli_query($conn, $sql)) {
         echo "<script type='text/javascript'>alert('vehicle Added Successful')</script>";
-        
+        header("location:allvehicle.php");
       } else {
         echo "<script type='text/javascript'>alert('vehicle Not Added')</script>";
         

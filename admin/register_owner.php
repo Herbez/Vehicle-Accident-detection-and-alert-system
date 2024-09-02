@@ -150,6 +150,7 @@ if(isset($_POST['addowner']))
     
     if (mysqli_query($conn, $sql)) {
         echo "<script type='text/javascript'>alert('owner Added Successful')</script>";
+        header("location:allowners.php");
         
       } else {
         echo "<script type='text/javascript'>alert('owner Not Added')</script>";
