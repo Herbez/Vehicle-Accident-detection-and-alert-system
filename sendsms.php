@@ -44,7 +44,7 @@ $message .= "Victim's Name: $fnames\n";
 // $familyphone
 $data=array(
     "sender"=>'+250789091938',
-    "recipients"=>'+250722823538',
+    "recipients"=> $familyphone ,
     "message"=>$message,
   );
 
