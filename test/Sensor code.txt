@@ -722,29 +722,27 @@ void loop() {
 
 // accelerometer, buzzer and vibration sensor
 
-Accelerometer
--------------
-X-axis ------> A0(esp8266)
-VCC ---------> VCC(esp8266)
-GND ---------> GND(esp8266)
+Accelerometer (X-axis)
+X-axis -> A0 (Analog Input Pin, A0)
+VCC -> VCC (3.3V Power)
+GND -> GND (Ground)
+------------------------------------
 
-vibration sensor
-----------------
-DO(vibration) ---------> D5(esp8266)
-VCC ---------> VCC(esp8266)
-GND ---------> GND(esp8266)
+Vibration Sensor
+DO -> D5 (GPIO14)
+VCC -> VCC (3.3V Power)
+GND -> GND (Ground)
+-------------------------------------
+GPS Module
+TX -> D1 (GPIO5)
+RX -> D2 (GPIO4)
+VCC -> VCC (3.3V Power)
+GND -> GND (Ground)
 
-GPS
----
-TX ----------> D1(esp8266)
-RX ----------> D2(esp8266)
-VCC ---------> VCC(esp8266)
-GND ---------> GND(esp8266)
-
+-------------------------------------
 Buzzer
-------
-GND ----------> GND(esp8266)
-VCC -----------> D7(esp8266)
+VCC -> D7 (GPIO13)
+GND -> GND (Ground)
 
 
 const int xpin = A0;  // x-axis of the accelerometer

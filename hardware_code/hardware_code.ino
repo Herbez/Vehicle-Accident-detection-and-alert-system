@@ -1,11 +1,9 @@
 
-N.B: in preference add >> http://arduino.esp8266.com/stable/package_esp8266com_index.json
-
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 
 const char* ssid = "Herbez"; // Wi-Fi name
-const char* password = "123456777"; // Wi-fi password
+const char* password = "Hpass@123"; // Wi-fi password
 
 const int xpin = A0;  // x-axis of the accelerometer
 const int vibrationSensor = D5; // Digital pin connected to the vibration sensor
@@ -35,8 +33,9 @@ void setup() {
 void sendGPSData() {
   if (WiFi.status() == WL_CONNECTED) {
     // Prepare the data to send
-    String latitude = "-1.984446"; // Replace with actual GPS data
-    String longitude = "30.092817"; // Replace with actual GPS data
+    String latitude = "-1.5618553"; // Replace with actual GPS data
+    String longitude = "29.6366026"; // Replace with actual GPS data
+
     String impactDetected = "1"; // Accident detected
 
     if (client.connect("192.168.80.252", 80)) {  // Replace with your server's IP address

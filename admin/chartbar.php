@@ -40,7 +40,7 @@ var chart = new CanvasJS.Chart("chartContainer", {
     theme: "light2",
     zoomEnabled: true,
     title: {
-        text: "Vehicle Accident Data"
+        text: "Road Traffic Accident Data"
     },
     axisY: {
         title: "Number of Incidents",

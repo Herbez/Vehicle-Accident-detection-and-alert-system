@@ -43,7 +43,7 @@ function getVehicleCount($dbh) {
 
 // Function to get the count of baccidents
 function getaccidentCount($dbh) {
-  $query = "SELECT COUNT(*) AS accidentCount FROM location ";
+  $query = "SELECT COUNT(*) AS accidentCount FROM accident_detection ";
   $stmt = $dbh->query($query);
   $row = $stmt->fetch(PDO::FETCH_ASSOC);
   

@@ -85,11 +85,13 @@ if(isset($_SESSION["email"]))
                     <thead class = "text-primary">
                       <tr>
                         <th>Nationalid</th>
+                        <th>Names</th>
                         <th>License Plate</th>
                         <th>Type</th>
                         <th>GPS ID</th>
                         <th>Status</th>
                         <th>Location</th>
+                        <th>Date</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -101,6 +103,7 @@ if(isset($_SESSION["email"]))
                         {   
                           
                             $vehicleid=$row['vehicleid'];
+                            $fnames=$row['fnames'];
                             $licplt=$row['licenseplate'];
                             $type=$row['type'];
                             $gpsid=$row['gpsmodid'];
@@ -109,18 +112,20 @@ if(isset($_SESSION["email"]))
                             $nid=$row['nationalid'];
                             $lat=$row['latitude'];
                             $lon=$row['longitude'];
+                            $dtime=$row['dtime'];
                         
                     
                         ?>        
 
                             <tr>
-                            <td><b><?php echo $nid ?></b></td>
+                                <td><b><?php echo $nid ?></b></td>
+                                <td><b><?php echo $fnames ?></b></td>
                                 <td><b><?php echo $licplt ?></b></td>
                                 <td><b><?php echo $type ?></b></td>
                                 <td><b><?php echo $gpsid ?></b></td>
                                 <td><b><span class="badge badge-danger">Accident occurred</span></b></td>
                                 <td><b> <?php  echo "<a href='https://maps.google.com/?q=" . $lat . "," . $lon . "' target='_blank'>View on Map</a>"; ?></b></td> 
-
+                                <td><b><?php echo $dtime ?></b></td>
                                 
                             </tr>
                         <?php }} ?>
